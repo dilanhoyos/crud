@@ -1,6 +1,6 @@
 import { isEmpty, size } from 'lodash';
-import React, { useState } from 'react';
-import shortid from 'shortid';
+import React, { useState, useEffect } from 'react';
+import { addDocument, getCollection, updateDocument, deleteDocument } from './actions';
 //useState is a hook, useful for saving data and modify it here
 
 function App() {
@@ -8,7 +8,15 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [id, setId] = useState("");
-  const [error, setError] = useState(null)
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const result = await getCollection('tasks');
+      if(result.statusResponse)
+        setTasks(result.data);
+    })()
+  }, [])
 
   const validForm = () => {
     let isValid = true;
@@ -23,22 +31,32 @@ function App() {
     return isValid;
   }
 
-  const addTask = (e) => {
+  const addTask = async (e) => {
     e.preventDefault(); // Validate that the user don't let the form empty
     if (!validForm()) {
       return;
     }
-    const newTask = {
-      id: shortid.generate(),
-      name: task // task:task
+
+    const result = await addDocument('tasks', { name: task })
+    
+    if(!result.statusResponse){
+      setError(result.error);
+      return;
     }
     //console.log('OK');
 
-    setTasks([ ...tasks, newTask ]);
+    setTasks([ ...tasks, { id: result.data.id, name: task } ]);
     setTask("");
   }
 
-  const deleteTask = (taskId) => {
+  const deleteTask = async (taskId) => {
+    const result = await deleteDocument(`tasks`, taskId);
+
+    if(!result.statusResponse) {
+      setError(result.error);
+      return;
+    }
+
     const filteredTasks = tasks.filter(task => task.id !== taskId);
 
     setTasks(filteredTasks);
@@ -50,12 +68,18 @@ function App() {
     setId(task.id);
   }
 
-  const saveTask = (e) => {
+  const saveTask = async (e) => {
     e.preventDefault(); // Validate that the user don't let the form empty
     if (isEmpty(task)) { // task is the form's value
       console.log("Task Empty");
       return;
     }
+
+    const result = await updateDocument(`tasks`, id, { name: task });
+    if(!result.statusResponse) {
+      setError(result.error);
+      return;
+    }      
 
     const edittedTasks = tasks.map(item => item.id === id ? { id, name: task } : item);
     setTasks(edittedTasks);
