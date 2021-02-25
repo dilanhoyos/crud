@@ -116,7 +116,7 @@ function App() {
                     </li>
                     ))
                   }
-                </ul>    
+                </ul>
               )
             }
           </div>
